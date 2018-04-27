@@ -60,15 +60,19 @@ class Pubmed(object):
 
     def start(self):
 
+        term_list = self.term.split(',')
+
         if self.term.isdigit():
             pmids = [self.term]
-            print 'Use pmids: {}'.format(pmids)
+        elif all([each.isdigit() for each in term_list]):
+            pmids = term_list
         else:
             pmids = self.get_pmids(self.term)
-            if not pmids:
-                print 'No pubmed for term: "{}"'.format(self.term)
-                exit(0)
-            print 'Found {} pmids: {}'.format(len(pmids), pmids)
+
+        if not pmids:
+            print 'No pubmed for term: "{}"'.format(self.term)
+            exit(0)
+        print 'Use {} pmids: {}'.format(len(pmids), pmids)
 
         # pmids = ['17284678', '9997']
         # print pmids
@@ -174,9 +178,14 @@ def main():
 
 if __name__ == "__main__":
 
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
 
-    parser.add_argument('term', help='The input term to search, could be like NCBI search format. eg: "(NGS) AND CVD"')
+    parser.add_argument(
+        'term',
+        help='The input term to search\n'
+        'could be like NCBI search format. eg: "(NGS) AND CVD"\n'
+        'or pmid. eg: 25261758\n'
+        'or pmids. eg: 25261758,24564649,24191723')
     parser.add_argument('-o', '--out-prefix', help='The prefix of the output filename')
     parser.add_argument('-m', '--retmax', help='The max count to return[default=%(default)s]', default='20')
     parser.add_argument('-O', '--out-format', help='The output format[default=%(default)s]', default='all', choices=['xls', 'html', 'json', 'all'])
