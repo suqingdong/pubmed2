@@ -9,4 +9,6 @@
 
 
 ### Result Demo
-[ngs_AND_cardiomyopathy](https://suqingdong.github.io/pubmed2/test/ngs_AND_cardiomyopathy.html)
+HTML - [ngs_AND_cardiomyopathy](https://suqingdong.github.io/pubmed2/test/ngs_AND_cardiomyopathy.html)
+JSON - [ngs_AND_cardiomyopathy](https://suqingdong.github.io/pubmed2/test/ngs_AND_cardiomyopathy.json)
+XLS - [ngs_AND_cardiomyopathy](https://suqingdong.github.io/pubmed2/test/ngs_AND_cardiomyopathy.xls)
