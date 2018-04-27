@@ -5,14 +5,21 @@ import sys
 import json
 import argparse
 
-import bs4
-import requests
+try:
+    import bs4
+    import requests
 
-import django
-from django.conf import settings
-from django.template import loader, Context
+    import django
+    from django.conf import settings
+    from django.template import loader
+    from get_impact_factor import getIF
+except ImportError:
+    print (
+        'This program needs some modules: bs4, requests, django, docopt\n'
+        'You can use `pip install module_name` to install'
+    )
+    exit(1)
 
-from get_impact_factor import getIF
 
 reload(sys)
 sys.setdefaultencoding('utf8')
