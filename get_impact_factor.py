@@ -25,7 +25,7 @@ BASE_URL = 'http://www.letpub.com.cn/index.php'
 
 
 # 自定义的装饰器
-def try_again(N=10):
+def try_again(N=10, default=None):
     def decorator(func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
@@ -39,6 +39,7 @@ def try_again(N=10):
                     time.sleep(random.randint(5, 10))
             if n == N:
                 print '[error] `{}` failed too many times({})'.format(func.__name__, N)
+                return default
         return wrapper
     return decorator
 

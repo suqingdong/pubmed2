@@ -17,7 +17,7 @@ try:
     from django.template import loader
     from googletrans import Translator
 
-    from get_impact_factor import get_impact_factor
+    from get_impact_factor import get_impact_factor, try_again
 
 except ImportError as e:
     print 'ImportError: \033[32m{}\033[0m'.format(e)
@@ -83,7 +83,8 @@ class Pubmed(object):
         self.out = args.get('out_prefix') or \
             self.term.strip().replace(' ', '_').replace('(', '').replace(')', '')
 
-        self.each_page_max = 100
+        self.each_page_max = args['page_size']
+        self.encoding = args['encoding']
         self.title = ['pmid', 'title', 'pubdate', 'authors', 'abstract', 'abstract_cn', 'journal', 'impact_factor', 'pmc']
         self.translator = Translator(service_urls=['translate.google.cn'])
 
@@ -122,9 +123,6 @@ class Pubmed(object):
             if len(pmids) <= 10 else '[{}, ...]'.format(', '.join(pmids[:10])),
             **color_dict)
 
-        # pmids = ['17284678', '9997']
-        # print pmids
-
         xmls = self.get_xmls(pmids)
 
         results = self.parse_xml(xmls, pmids)
@@ -134,7 +132,7 @@ class Pubmed(object):
                 time=get_now_time(), mif=self.min_factor, number=len(results), **color_dict)
 
         if self.format in ('xls', 'all'):
-            with codecs.open(self.out + '.xls', 'w', encoding='gbk', errors='ignore') as out:
+            with codecs.open(self.out + '.xls', 'w', encoding=self.encoding, errors='ignore') as out:
                 out.write('\t'.join(self.title) + '\n')
                 for result in results:
                     linelist = [result[each] for each in self.title]
@@ -193,6 +191,11 @@ class Pubmed(object):
             xml = requests.get(url, params=payload).text
             yield xml
 
+    @try_again(10, '.')
+    def translate(self, text):
+
+        return self.translator.translate(text, dest='zh-cn').text
+
     def parse_xml(self, xmls, pmids):
 
         results = []
@@ -213,7 +216,8 @@ class Pubmed(object):
                 pubdate = self.get_text(pubmedarticle, 'pubdate')
                 title = self.get_text(pubmedarticle, 'articletitle')
                 abstract = self.get_text(pubmedarticle, 'abstracttext')
-                abstract_cn = self.translator.translate(abstract, dest='zh-cn').text
+                # abstract_cn = self.translator.translate(abstract, dest='zh-cn').text
+                abstract_cn = self.translate(abstract)
                 pmc = self.get_text(pubmedarticle, 'articleid[idtype="pmc"]')
                 doi = self.get_text(pubmedarticle, 'articleid[idtype="doi"]')
                 journal = self.get_text(pubmedarticle, 'journal isoabbreviation')
@@ -295,6 +299,18 @@ if __name__ == "__main__":
         type=int,
         help='The max count to return[default=%(default)s], 0 for no limits',
         default=100)
+    parser.add_argument(
+        '-p',
+        '--page-size',
+        type=int,
+        help='The max number of each page to craw[default=%(default)s]',
+        default=100)
+    parser.add_argument(
+        '-enc',
+        '--encoding',
+        help='The encoding of output xls file[default="%(default)s"]',
+        default='gbk',
+        choices=['gbk', 'utf8'])
     parser.add_argument(
         '-mif', '--min-impact-factor', type=float, help='The minimum of impact factor to save')
 
