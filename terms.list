@@ -1,6 +1,11 @@
-(ngs) AND cardiomyopathy
-(ngs) AND congenital heart disease
-(ngs) AND left ventricular non-compaction cardiomyopathy
-(ngs) AND pulmonary artery hypertension
-(ngs) AND primary hypertension
-(ngs) AND Early onset coronary heart disease
+(cardiomyopathy[Title/Abstract]) AND ngs
+
+(congenital heart disease) AND ngs
+
+(LVNC) AND sequencing
+
+(pulmonary artery hypertension) AND sequencing 
+
+(primary hypertension[Title/Abstract]) AND sequencing
+
+(coronary heart disease) AND ngs

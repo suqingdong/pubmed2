@@ -1,0 +1,95 @@
+<!-- Latest compiled and minified CSS & JS -->
+<link href="https://cdn.bootcss.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet">
+
+
+<div class="container" style="margin-top: 20px">
+
+    {% for result in results %}
+    <div class="panel panel-info">
+
+        <button type="button" class="close">
+            <span aria-hidden="true">&times;</span>
+        </button>
+
+        <!-- Default panel contents -->
+        <div class="panel-heading">
+            <b>{{ forloop.counter }}. {{ result.title }}</b>
+        </div>
+        <div class="panel-body">
+
+            <!-- Nav tabs -->
+            <ul class="nav nav-tabs" role="tablist">
+                <li role="presentation" class="active">
+                    <a href="#abstract_{{ result.pmid }}" aria-controls="abstract" role="tab" data-toggle="tab">Abstract</a>
+                </li>
+                <li role="presentation">
+                    <a href="#abstract_cn_{{ result.pmid }}" aria-controls="abstract_cn" role="tab" data-toggle="tab">Abstract_Chinese</a>
+                </li>
+            </ul>
+
+            <!-- Tab panes -->
+            <div class="tab-content well">
+                <div role="tabpanel" class="tab-pane active" id="abstract_{{ result.pmid }}">
+                    <p>{{ result.abstract }}</p>
+                </div>
+                <div role="tabpanel" class="tab-pane" id="abstract_cn_{{ result.pmid }}">
+                    <p>{{ result.abstract_cn }}</p>
+                </div>
+            </div>
+
+            <a class="btn btn-sm btn-info" target="_blank" href="http://www.letpub.com.cn/index.php?page=journalapp&view=search&searchsort=relevance&searchname={{ result.journal }}">
+                Journal: {{ result.journal }} [IF={{ result.impact_factor }}]
+            </a>
+
+            <a class="btn btn-sm btn-warning" href="https://www.ncbi.nlm.nih.gov/pubmed/{{ result.pmid }}" target="_blank">
+                PMID: {{ result.pmid }}
+            </a>
+
+            <a class="btn btn-sm btn-success">
+                PubDate: {{ result.pubdate }}
+            </a>
+
+            <a class="btn btn-sm btn-danger" title="{{ result.authors }}">
+                Authors: {{ result.authors | truncatechars_html:20 }}
+            </a>
+
+            {% if result.pmc != '.' %}
+            <a class="btn btn-sm btn-primary" href="https://www.ncbi.nlm.nih.gov/pmc/articles/{{ result.pmc }}" target="_blank">
+                {{ result.pmc }}
+            </a>
+            {% endif %}
+
+            <form action="http://sci-hub.tw/" method="POST" style="display:inline" target="_blank">
+                <input type="hidden" name="request" value="{{ result.pmid }}">
+                <input type="submit" value="PDF(Sci-Hub)" class="btn btn-sm btn-primary sci-hub">
+            </form>
+
+        </div>
+    </div>
+    {% endfor %}
+
+</div>
+
+
+
+<script src="https://cdn.bootcss.com/jquery/3.3.1/jquery.min.js"></script>
+<script src="https://cdn.bootcss.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+
+
+<script>
+    $(document).ready(function () {
+        $('.close').click(function () {
+            $(this).parent().fadeOut();
+        });
+
+        $('.panel-heading').click(function () {
+            $(this).next().fadeToggle();
+            $(this).next().next().fadeToggle();
+        });
+
+        //var panels = ['panel-success', 'panel-info', 'panel-warning', 'panel-danger'];
+        //$('.panel').each(function () {
+        //    $(this).attr('class', )
+        //});
+    });
+</script>
