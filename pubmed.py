@@ -85,6 +85,8 @@ class Pubmed(object):
 
         self.each_page_max = args['page_size']
         self.encoding = args['encoding']
+        self.start_point = args['start_point']
+
         self.title = ['pmid', 'title', 'pubdate', 'authors', 'abstract', 'abstract_cn', 'journal', 'impact_factor', 'pmc']
         self.translator = Translator(service_urls=['translate.google.cn'])
 
@@ -123,13 +125,39 @@ class Pubmed(object):
             if len(pmids) <= 10 else '[{}, ...]'.format(', '.join(pmids[:10])),
             **color_dict)
 
+        if self.start_point < len(pmids):
+            print 'start craw from the {}st pmid'.format(self.start_point)
+            pmids = pmids[self.start_point-1:]
+
         xmls = self.get_xmls(pmids)
 
+        # results = self.parse_xml(xmls, pmids)
+        # results = [result for result in self.parse_xml(xmls, pmids)]
         results = self.parse_xml(xmls, pmids)
 
+        result_len = self.save_result(results)
+
         if self.min_factor:
-            print '{fore_yellow}Number of results(IF >= {mif}): {number}{fore_reset}'.format(
-                time=get_now_time(), mif=self.min_factor, number=len(results), **color_dict)
+            print '{fore_yellow}\nNumber of results(IF>={mif}): {number}{fore_reset}'.format(
+                time=get_now_time(),
+                mif=self.min_factor,
+                number=result_len,
+                **color_dict)
+
+    def save_result(self, results):
+
+        # write from generator
+        if self.format == 'xls':
+            with codecs.open(self.out + '.xls', 'w', encoding=self.encoding, errors='ignore') as out:
+                out.write('\t'.join(self.title) + '\n')
+                for num, result in enumerate(results):
+                    linelist = [result[each] for each in self.title]
+                    out.write('\t'.join(linelist) + '\n')
+            print 'save result to: {}.xls'.format(self.out)
+            return num + 1
+
+        # otherwise, convert generator to list
+        results = list(results)
 
         if self.format in ('xls', 'all'):
             with codecs.open(self.out + '.xls', 'w', encoding=self.encoding, errors='ignore') as out:
@@ -155,6 +183,8 @@ class Pubmed(object):
                 out.write(html)
 
             print 'save result to: {}.html'.format(self.out)
+
+        return len(results)
 
     def get_pmids(self, term):
 
@@ -198,7 +228,7 @@ class Pubmed(object):
 
     def parse_xml(self, xmls, pmids):
 
-        results = []
+        # results = []
 
         n = 1
         for xml in xmls:
@@ -242,10 +272,11 @@ class Pubmed(object):
                         each: locals()[each]
                     })
 
-                results.append(context)
+                yield context
+                # results.append(context)
 
         print '{fore_green}[info {time}] all pmids done!{fore_reset}\n'.format(time=get_now_time(), **color_dict)
-        return results
+        # return results
 
     @staticmethod
     def get_text(soup, key):
@@ -291,7 +322,7 @@ if __name__ == "__main__":
         '-O',
         '--out-format',
         help='The output format[default=%(default)s]',
-        default='all',
+        default='xls',
         choices=['xls', 'html', 'json', 'all'])
     parser.add_argument(
         '-m',
@@ -312,7 +343,16 @@ if __name__ == "__main__":
         default='gbk',
         choices=['gbk', 'utf8'])
     parser.add_argument(
-        '-mif', '--min-impact-factor', type=float, help='The minimum of impact factor to save')
+        '-mif',
+        '--min-impact-factor',
+        type=float,
+        help='The minimum of impact factor to save')
+    parser.add_argument(
+        '-start',
+        '--start-point',
+        type=int,
+        help='The start point for all pmids',
+        default=1)
 
     args = vars(parser.parse_args())
 
