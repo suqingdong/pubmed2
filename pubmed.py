@@ -3,6 +3,7 @@
 import os
 import sys
 import json
+import time
 import datetime
 import argparse
 import codecs
@@ -114,7 +115,7 @@ class Pubmed(object):
                 time=get_now_time(), term=self.term, **color_dict)
             exit(0)
 
-        print '{fore_red}{back_yellow}[info] Use {length}{total_length} pmids:{back_reset}{fore_reset} {pmids}'.format(
+        print '{fore_red}{back_yellow}Use {length}{total_length} pmids:{back_reset}{fore_reset} {pmids}'.format(
             length=len(pmids),
             total_length=total_length,
             pmids=pmids
@@ -239,7 +240,7 @@ class Pubmed(object):
 
                 results.append(context)
 
-        print '{fore_green}[info {time}] all done!{fore_reset}'.format(time=get_now_time(), **color_dict)
+        print '{fore_green}[info {time}] all pmids done!{fore_reset}\n'.format(time=get_now_time(), **color_dict)
         return results
 
     @staticmethod
@@ -253,8 +254,14 @@ class Pubmed(object):
 
 def main():
 
+    start = time.time()
+
     pubmed = Pubmed()
     pubmed.start()
+
+    end = time.time()
+
+    print '\nTotal time: {:.2f}s'.format(end - start)
 
 
 if __name__ == "__main__":
