@@ -3,7 +3,7 @@
 import os
 import sys
 import json
-import time
+import datetime
 import argparse
 import codecs
 
@@ -42,6 +42,7 @@ color_dict = {
     'fore_red': colorama.Fore.RED,
     'fore_green': colorama.Fore.GREEN,
     'fore_cyan': colorama.Fore.CYAN,
+    'fore_yellow': colorama.Fore.YELLOW,
     'back_yellow': colorama.Back.YELLOW,
     'style_bright': colorama.Style.BRIGHT,
 }
@@ -65,6 +66,11 @@ def configure_django():
     django.setup()
 
 
+def get_now_time(time_fmt='%Y-%m-%d %H:%M:%S'):
+
+    return datetime.datetime.now().strftime(time_fmt)
+
+
 class Pubmed(object):
 
     def __init__(self):
@@ -72,10 +78,11 @@ class Pubmed(object):
         self.term = args.get('term')
         self.retmax = args.get('retmax')
         self.format = args.get('out_format')
+        self.min_factor = args['min_impact_factor']
         self.out = args.get('out_prefix') or \
             self.term.strip().replace(' ', '_').replace('(', '').replace(')', '')
 
-        self.each_page_max = 200
+        self.each_page_max = 100
         self.title = ['pmid', 'title', 'pubdate', 'authors', 'abstract', 'abstract_cn', 'journal', 'impact_factor', 'pmc']
         self.translator = Translator(service_urls=['translate.google.cn'])
 
@@ -103,13 +110,15 @@ class Pubmed(object):
                 total_length = '/{}'.format(len(total_pmids))
 
         if not pmids:
-            print 'No pubmed for term: "{}"'.format(self.term)
+            print '{fore_red}[error {time}] No pubmed for term: "{term}"{fore_reset}'.format(
+                time=get_now_time(), term=self.term, **color_dict)
             exit(0)
 
-        print '{fore_red}{back_yellow}Use {length}{total_length} pmids:{back_reset}{fore_reset} {pmids}'.format(
+        print '{fore_red}{back_yellow}[info] Use {length}{total_length} pmids:{back_reset}{fore_reset} {pmids}'.format(
             length=len(pmids),
             total_length=total_length,
-            pmids=pmids if len(pmids) <= 10 else '[{}, ...]'.format(', '.join(pmids[:10])),
+            pmids=pmids
+            if len(pmids) <= 10 else '[{}, ...]'.format(', '.join(pmids[:10])),
             **color_dict)
 
         # pmids = ['17284678', '9997']
@@ -118,6 +127,10 @@ class Pubmed(object):
         xmls = self.get_xmls(pmids)
 
         results = self.parse_xml(xmls, pmids)
+
+        if self.min_factor:
+            print '{fore_yellow}Number of results(IF >= {mif}): {number}{fore_reset}'.format(
+                time=get_now_time(), mif=self.min_factor, number=len(results), **color_dict)
 
         if self.format in ('xls', 'all'):
             with codecs.open(self.out + '.xls', 'w', encoding='gbk', errors='ignore') as out:
@@ -193,7 +206,8 @@ class Pubmed(object):
 
             for pubmedarticle in soup.select('pubmedarticle'):
                 pmid = self.get_text(pubmedarticle, 'pmid')
-                print '{fore_cyan}> {n}/{length} dealing with pmid: {pmid}{fore_reset}'.format(n=n, length=len(pmids), pmid=pmid, **color_dict)
+                print '{fore_cyan}[info {time}] {n}/{length} dealing with pmid: {pmid}{fore_reset}'.format(
+                    time=get_now_time(), n=n, length=len(pmids), pmid=pmid, **color_dict)
                 n += 1
                 pubdate = self.get_text(pubmedarticle, 'pubdate')
                 title = self.get_text(pubmedarticle, 'articletitle')
@@ -212,7 +226,11 @@ class Pubmed(object):
                     impact_factor = get_impact_factor(journal, 'impact_factor.db')
                 else:
                     impact_factor = get_impact_factor(journal)
-                    
+
+                if self.min_factor:
+                    if (impact_factor == '.') or (float(impact_factor) < self.min_factor):
+                        continue
+
                 context = {}
                 for each in self.title:
                     context.update({
@@ -221,6 +239,7 @@ class Pubmed(object):
 
                 results.append(context)
 
+        print '{fore_green}[info {time}] all done!{fore_reset}'.format(time=get_now_time(), **color_dict)
         return results
 
     @staticmethod
@@ -269,6 +288,8 @@ if __name__ == "__main__":
         type=int,
         help='The max count to return[default=%(default)s], 0 for no limits',
         default=100)
+    parser.add_argument(
+        '-mif', '--min-impact-factor', type=float, help='The minimum of impact factor to save')
 
     args = vars(parser.parse_args())
 
