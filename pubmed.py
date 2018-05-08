@@ -199,6 +199,7 @@ class Pubmed(object):
 
         return requests.get(url, params=payload).json()['esearchresult']['idlist']
 
+    @try_again()
     def get_xmls(self, pmids):
 
         url = self.BASE_URL + 'efetch.fcgi'
