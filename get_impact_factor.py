@@ -25,7 +25,7 @@ BASE_URL = 'http://www.letpub.com.cn/index.php'
 
 
 # 自定义的装饰器
-def try_again(N=10, default=None):
+def try_again(N=10, default='.'):
     def decorator(func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
@@ -101,7 +101,7 @@ def get_impact_factor(searchname, database=None):
         elif database.endswith('.db'):
             db = sqlite3.connect(database)
             cursor = db.cursor()
-            sql = "SELECT * FROM `factor` WHERE journal LIKE '%{}%';".format(searchname)
+            sql = "SELECT * FROM `factor` WHERE journal LIKE '%{}%';".format(searchname.replace(",", ""))
             cursor.execute(sql)
             result = cursor.fetchall()
             journal_impact_factor = dict(result)
