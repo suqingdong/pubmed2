@@ -68,6 +68,7 @@ def get_now_time(time_fmt='%Y-%m-%d %H:%M:%S'):
 
 
 class Pubmed(object):
+
     def __init__(self):
 
         self.term = args.get('term')
@@ -83,10 +84,7 @@ class Pubmed(object):
 
         self.not_trans = args['not_translate']
 
-        self.title = [
-            'pmid', 'title', 'pubdate', 'authors', 'abstract', 'abstract_cn',
-            'journal', 'impact_factor', 'pmc', 'doi', 'pubtype'
-        ]
+        self.title = args['title'].split(',')
 
         self.translator = Translator(service_urls=['translate.google.cn'])
 
@@ -94,8 +92,15 @@ class Pubmed(object):
 
     def start(self):
 
-        if self.not_trans:
+        for field in self.title:
+            if field not in default_title:
+                print '[error] invalid title field "{}"\nyou can only choose from {}'.format(field, default_title)
+                exit(1)
+
+        if self.not_trans and 'abstract_cn' in self.title:
             self.title.pop(self.title.index('abstract_cn'))
+
+        print 'output title: {}'.format(self.title)
 
         term_list = self.term.split(',')
 
@@ -233,7 +238,7 @@ class Pubmed(object):
             xml = requests.get(url, params=payload).text
             yield xml
 
-    @try_again(10, '.')
+    @try_again(10)
     def translate(self, text):
 
         return self.translator.translate(text, dest='zh-cn').text
@@ -263,7 +268,7 @@ class Pubmed(object):
                 title = self.get_text(pubmedarticle, 'articletitle')
                 abstract = self.get_text(pubmedarticle, 'abstracttext')
 
-                if not self.not_trans:
+                if 'abstract_cn' in self.title:
                     abstract_cn = self.translate(abstract)
 
                 pmc = self.get_text(pubmedarticle, 'articleid[idtype="pmc"]')
@@ -330,6 +335,8 @@ def main():
 
 if __name__ == "__main__":
 
+    default_title = ['pmid', 'title', 'pubdate', 'authors', 'abstract', 'abstract_cn', 'journal', 'impact_factor', 'pmc', 'doi', 'pubtype']
+
     parser = argparse.ArgumentParser(
         prog='pubmed',
         version=__version__,
@@ -387,6 +394,13 @@ if __name__ == "__main__":
         '--not-translate',
         action='store_true',
         help='Do not translate abstract')
+    parser.add_argument(
+        '-t',
+        '--title',
+        help='The title to craw\n'
+        'you can choose one or more from [%(default)s]\n'
+        'and separate by ","',
+        default=','.join(default_title))
 
     args = vars(parser.parse_args())
 
