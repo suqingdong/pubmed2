@@ -21,7 +21,7 @@ try:
 
 except ImportError as e:
     print 'ImportError: \033[32m{}\033[0m'.format(e)
-    print (
+    print(
         'This program needs some modules: bs4, requests, fuzzywuzzy, django, googletrans, colorama, lxml\n'
         'You can use \033[32m` pip install module_name `\033[0m to install them'
     )
@@ -54,16 +54,11 @@ def configure_django():
     settings.configure(
         DEBUG=True,
         TEMPLATE_DEBUG=True,
-        TEMPLATES=[
-            {
-                'BACKEND': 'django.template.backends.django.DjangoTemplates',
-                'DIRS': [
-                    BASE_DIR,
-                    os.path.join(BASE_DIR, 'templates')
-                ]
-            }
-        ]
-    )
+        TEMPLATES=[{
+            'BACKEND':
+            'django.template.backends.django.DjangoTemplates',
+            'DIRS': [BASE_DIR, os.path.join(BASE_DIR, 'templates')]
+        }])
     django.setup()
 
 
@@ -73,7 +68,6 @@ def get_now_time(time_fmt='%Y-%m-%d %H:%M:%S'):
 
 
 class Pubmed(object):
-
     def __init__(self):
 
         self.term = args.get('term')
@@ -87,7 +81,10 @@ class Pubmed(object):
         self.encoding = args['encoding']
         self.start_point = args['start_point']
 
-        self.title = ['pmid', 'title', 'pubdate', 'authors', 'abstract', 'abstract_cn', 'journal', 'impact_factor', 'pmc']
+        self.title = [
+            'pmid', 'title', 'pubdate', 'authors', 'abstract', 'abstract_cn',
+            'journal', 'impact_factor', 'pmc', 'doi', 'pubtype'
+        ]
         self.translator = Translator(service_urls=['translate.google.cn'])
 
         self.BASE_URL = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/'
@@ -127,7 +124,7 @@ class Pubmed(object):
 
         if self.start_point < len(pmids):
             print 'start craw from the {}st pmid'.format(self.start_point)
-            pmids = pmids[self.start_point-1:]
+            pmids = pmids[self.start_point - 1:]
 
         xmls = self.get_xmls(pmids)
 
@@ -148,7 +145,11 @@ class Pubmed(object):
 
         # write from generator
         if self.format == 'xls':
-            with codecs.open(self.out + '.xls', 'w', encoding=self.encoding, errors='ignore') as out:
+            with codecs.open(
+                    self.out + '.xls',
+                    'w',
+                    encoding=self.encoding,
+                    errors='ignore') as out:
                 out.write('\t'.join(self.title) + '\n')
                 for num, result in enumerate(results):
                     linelist = [result[each] for each in self.title]
@@ -160,7 +161,11 @@ class Pubmed(object):
         results = list(results)
 
         if self.format in ('xls', 'all'):
-            with codecs.open(self.out + '.xls', 'w', encoding=self.encoding, errors='ignore') as out:
+            with codecs.open(
+                    self.out + '.xls',
+                    'w',
+                    encoding=self.encoding,
+                    errors='ignore') as out:
                 out.write('\t'.join(self.title) + '\n')
                 for result in results:
                     linelist = [result[each] for each in self.title]
@@ -179,7 +184,9 @@ class Pubmed(object):
             html = template.render({'results': results})
             # html = template.render({'results': json.dumps(results).replace("'", "\\'")})
 
-            with codecs.open(self.out + '.html', 'w', encoding='utf8', errors='ignore') as out:
+            with codecs.open(
+                    self.out + '.html', 'w', encoding='utf8',
+                    errors='ignore') as out:
                 out.write(html)
 
             print 'save result to: {}.html'.format(self.out)
@@ -197,7 +204,8 @@ class Pubmed(object):
             'retmax': '65535'
         }
 
-        return requests.get(url, params=payload).json()['esearchresult']['idlist']
+        return requests.get(
+            url, params=payload).json()['esearchresult']['idlist']
 
     @try_again()
     def get_xmls(self, pmids):
@@ -205,19 +213,16 @@ class Pubmed(object):
         url = self.BASE_URL + 'efetch.fcgi'
 
         for i in range(0, len(pmids), self.each_page_max):
-            pmid_list = pmids[i:i+self.each_page_max]
+            pmid_list = pmids[i:i + self.each_page_max]
 
             if i + self.each_page_max >= len(pmids):
                 end = len(pmids)
             else:
                 end = i + self.each_page_max
-            print '{fore_green}===== dealing with pmids: {start} ~ {end}{fore_reset}'.format(start=i + 1, end=end, **color_dict)
+            print '{fore_green}===== dealing with pmids: {start} ~ {end}{fore_reset}'.format(
+                start=i + 1, end=end, **color_dict)
 
-            payload = {
-                'db': 'pubmed',
-                'rettype': 'abstract',
-                'id': pmid_list
-            }
+            payload = {'db': 'pubmed', 'rettype': 'abstract', 'id': pmid_list}
 
             xml = requests.get(url, params=payload).text
             yield xml
@@ -242,7 +247,11 @@ class Pubmed(object):
             for pubmedarticle in soup.select('pubmedarticle'):
                 pmid = self.get_text(pubmedarticle, 'pmid')
                 print '{fore_cyan}[info {time}] {n}/{length} dealing with pmid: {pmid}{fore_reset}'.format(
-                    time=get_now_time(), n=n, length=len(pmids), pmid=pmid, **color_dict)
+                    time=get_now_time(),
+                    n=n,
+                    length=len(pmids),
+                    pmid=pmid,
+                    **color_dict)
                 n += 1
                 pubdate = self.get_text(pubmedarticle, 'pubdate')
                 title = self.get_text(pubmedarticle, 'articletitle')
@@ -251,32 +260,43 @@ class Pubmed(object):
                 abstract_cn = self.translate(abstract)
                 pmc = self.get_text(pubmedarticle, 'articleid[idtype="pmc"]')
                 doi = self.get_text(pubmedarticle, 'articleid[idtype="doi"]')
-                journal = self.get_text(pubmedarticle, 'journal isoabbreviation')
+                journal = self.get_text(pubmedarticle,
+                                        'journal isoabbreviation')
                 journal_full = self.get_text(pubmedarticle, 'journal title')
-                author_lastnames = pubmedarticle.select('authorlist author lastname')
-                author_initials = pubmedarticle.select('authorlist author initials')
-                authors = [' '.join([each[0].text, each[1].text]) for each in zip(author_lastnames, author_initials)]
+                author_lastnames = pubmedarticle.select(
+                    'authorlist author lastname')
+                author_initials = pubmedarticle.select(
+                    'authorlist author initials')
+                authors = [
+                    ' '.join([each[0].text, each[1].text])
+                    for each in zip(author_lastnames, author_initials)
+                ]
                 authors = ', '.join(authors)
 
+                pubtype = pubmedarticle.select(
+                    'publicationtypelist publicationtype')
+                pubtype = '|'.join([each.text for each in pubtype])
+
                 if os.path.exists('impact_factor.db'):
-                    impact_factor = get_impact_factor(journal, 'impact_factor.db')
+                    impact_factor = get_impact_factor(journal,
+                                                      'impact_factor.db')
                 else:
                     impact_factor = get_impact_factor(journal)
 
                 if self.min_factor:
-                    if (impact_factor == '.') or (float(impact_factor) < self.min_factor):
+                    if (impact_factor == '.') or (float(impact_factor) <
+                                                  self.min_factor):
                         continue
 
                 context = {}
                 for each in self.title:
-                    context.update({
-                        each: locals()[each]
-                    })
+                    context.update({each: locals()[each]})
 
                 yield context
                 # results.append(context)
 
-        print '{fore_green}[info {time}] all pmids done!{fore_reset}\n'.format(time=get_now_time(), **color_dict)
+        print '{fore_green}[info {time}] all pmids done!{fore_reset}\n'.format(
+            time=get_now_time(), **color_dict)
         # return results
 
     @staticmethod
@@ -341,8 +361,8 @@ if __name__ == "__main__":
         '-enc',
         '--encoding',
         help='The encoding of output xls file[default="%(default)s"]',
-        default='gbk',
-        choices=['gbk', 'utf8'])
+        default='utf8',
+        choices=['gbk', 'utf8', 'utf-8'])
     parser.add_argument(
         '-mif',
         '--min-impact-factor',
