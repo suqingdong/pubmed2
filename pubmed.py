@@ -81,15 +81,21 @@ class Pubmed(object):
         self.encoding = args['encoding']
         self.start_point = args['start_point']
 
+        self.not_trans = args['not_translate']
+
         self.title = [
             'pmid', 'title', 'pubdate', 'authors', 'abstract', 'abstract_cn',
             'journal', 'impact_factor', 'pmc', 'doi', 'pubtype'
         ]
+
         self.translator = Translator(service_urls=['translate.google.cn'])
 
         self.BASE_URL = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/'
 
     def start(self):
+
+        if self.not_trans:
+            self.title.pop(self.title.index('abstract_cn'))
 
         term_list = self.term.split(',')
 
@@ -256,8 +262,10 @@ class Pubmed(object):
                 pubdate = self.get_text(pubmedarticle, 'pubdate')
                 title = self.get_text(pubmedarticle, 'articletitle')
                 abstract = self.get_text(pubmedarticle, 'abstracttext')
-                # abstract_cn = self.translator.translate(abstract, dest='zh-cn').text
-                abstract_cn = self.translate(abstract)
+
+                if not self.not_trans:
+                    abstract_cn = self.translate(abstract)
+
                 pmc = self.get_text(pubmedarticle, 'articleid[idtype="pmc"]')
                 doi = self.get_text(pubmedarticle, 'articleid[idtype="doi"]')
                 journal = self.get_text(pubmedarticle,
@@ -374,6 +382,11 @@ if __name__ == "__main__":
         type=int,
         help='The start point for all pmids',
         default=1)
+    parser.add_argument(
+        '-nt',
+        '--not-translate',
+        action='store_true',
+        help='Do not translate abstract')
 
     args = vars(parser.parse_args())
 
