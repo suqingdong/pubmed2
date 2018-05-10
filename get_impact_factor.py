@@ -101,7 +101,7 @@ def get_impact_factor(searchname, database=None):
         elif database.endswith('.db'):
             db = sqlite3.connect(database)
             cursor = db.cursor()
-            sql = "SELECT * FROM `factor` WHERE journal LIKE '%{}%';".format(searchname.replace(",", ""))
+            sql = "SELECT * FROM `factor` WHERE journal LIKE '%{}%';".format(searchname.replace("'", ""))
             cursor.execute(sql)
             result = cursor.fetchall()
             journal_impact_factor = dict(result)
