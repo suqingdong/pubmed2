@@ -210,6 +210,12 @@ class Pubmed(object):
         return len(results)
 
     @try_again()
+    def get_response(self, url, **kwargs):
+
+        return requests.get(url, **kwargs)
+        
+
+    @try_again()
     def get_pmids(self, term):
 
         url = self.BASE_URL + 'esearch.fcgi'
@@ -221,7 +227,7 @@ class Pubmed(object):
             'retmax': '65535'
         }
 
-        return requests.get(
+        return self.get_response(
             url, params=payload,
             timeout=self.timeout).json()['esearchresult']['idlist']
 
@@ -242,7 +248,7 @@ class Pubmed(object):
 
             payload = {'db': 'pubmed', 'rettype': 'abstract', 'id': pmid_list}
 
-            xml = requests.get(url, params=payload, timeout=self.timeout).text
+            xml = self.get_response(url, params=payload, timeout=self.timeout).text
             yield xml
 
     @try_again(10)
