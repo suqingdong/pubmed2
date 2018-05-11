@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding=utf-8 -*-
 import os
+import re
 import sys
 import json
 import time
@@ -87,8 +88,8 @@ class Pubmed(object):
         self.title = args['title'].split(',')
 
         self.translator = Translator(service_urls=['translate.google.cn'])
-
         self.BASE_URL = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/'
+        self.timeout = 60
 
     def start(self):
 
@@ -100,9 +101,13 @@ class Pubmed(object):
         if self.not_trans and 'abstract_cn' in self.title:
             self.title.pop(self.title.index('abstract_cn'))
 
+        if self.min_factor == -1 and 'impact_factor' in self.title:
+            self.title.pop(self.title.index('impact_factor'))
+
         print 'output title: {}'.format(self.title)
 
-        term_list = self.term.split(',')
+        # term_list = self.term.split(',')
+        term_list = re.split(r',|\s+|;', self.term)
 
         total_length = ''
         if self.term.isdigit():
@@ -204,6 +209,7 @@ class Pubmed(object):
 
         return len(results)
 
+    @try_again()
     def get_pmids(self, term):
 
         url = self.BASE_URL + 'esearch.fcgi'
@@ -216,7 +222,8 @@ class Pubmed(object):
         }
 
         return requests.get(
-            url, params=payload).json()['esearchresult']['idlist']
+            url, params=payload,
+            timeout=self.timeout).json()['esearchresult']['idlist']
 
     @try_again()
     def get_xmls(self, pmids):
@@ -235,7 +242,7 @@ class Pubmed(object):
 
             payload = {'db': 'pubmed', 'rettype': 'abstract', 'id': pmid_list}
 
-            xml = requests.get(url, params=payload).text
+            xml = requests.get(url, params=payload, timeout=self.timeout).text
             yield xml
 
     @try_again(10)
@@ -243,6 +250,7 @@ class Pubmed(object):
 
         return self.translator.translate(text, dest='zh-cn').text
 
+    @try_again()
     def parse_xml(self, xmls, pmids):
 
         # results = []
@@ -273,9 +281,9 @@ class Pubmed(object):
 
                 pmc = self.get_text(pubmedarticle, 'articleid[idtype="pmc"]')
                 doi = self.get_text(pubmedarticle, 'articleid[idtype="doi"]')
-                journal = self.get_text(pubmedarticle,
-                                        'journal isoabbreviation')
+                journal = self.get_text(pubmedarticle, 'journal isoabbreviation')
                 journal_full = self.get_text(pubmedarticle, 'journal title')
+                issn = self.get_text(pubmedarticle, 'journal issn')
                 author_lastnames = pubmedarticle.select(
                     'authorlist author lastname')
                 author_initials = pubmedarticle.select(
@@ -290,16 +298,16 @@ class Pubmed(object):
                     'publicationtypelist publicationtype')
                 pubtype = '|'.join([each.text for each in pubtype])
 
-                if os.path.exists('impact_factor.db'):
-                    impact_factor = get_impact_factor(journal,
-                                                      'impact_factor.db')
-                else:
-                    impact_factor = get_impact_factor(journal)
+                if 'impact_factor' in self.title:
+                    database = os.path.join(BASE_DIR, 'impact_factor.db')
+                    if os.path.exists(database):
+                        impact_factor = get_impact_factor(journal, database)
+                    else:
+                        impact_factor = get_impact_factor(journal)
 
-                if self.min_factor:
-                    if (impact_factor == '.') or (float(impact_factor) <
-                                                  self.min_factor):
-                        continue
+                    if self.min_factor:
+                        if (impact_factor == '.') or (float(impact_factor) < self.min_factor):
+                            continue
 
                 context = {}
                 for each in self.title:
@@ -335,7 +343,7 @@ def main():
 
 if __name__ == "__main__":
 
-    default_title = ['pmid', 'title', 'pubdate', 'authors', 'abstract', 'abstract_cn', 'journal', 'impact_factor', 'pmc', 'doi', 'pubtype']
+    default_title = ['pmid', 'title', 'pubdate', 'authors', 'abstract', 'abstract_cn', 'journal', 'impact_factor', 'pmc', 'doi', 'pubtype', 'issn']
 
     parser = argparse.ArgumentParser(
         prog='pubmed',
@@ -382,7 +390,7 @@ if __name__ == "__main__":
         '-mif',
         '--min-impact-factor',
         type=float,
-        help='The minimum of impact factor to save')
+        help='The minimum of impact factor to save, -1 for no impact_factor')
     parser.add_argument(
         '-start',
         '--start-point',
