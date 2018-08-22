@@ -7,6 +7,7 @@ import json
 import time
 import datetime
 import argparse
+import textwrap
 import codecs
 
 try:
@@ -77,7 +78,7 @@ class Pubmed(object):
         self.format = args.get('out_format')
         self.min_factor = args['min_impact_factor']
         self.out = args.get('out_prefix') or \
-            self.term.strip().replace(' ', '_').replace('(', '').replace(')', '')
+            re.sub(r' |\(|\)|/', '_', self.term.strip()).strip('_')
 
         self.each_page_max = args['page_size']
         self.encoding = args['encoding']
@@ -350,12 +351,18 @@ def main():
 if __name__ == "__main__":
 
     default_title = ['pmid', 'title', 'pubdate', 'authors', 'abstract', 'abstract_cn', 'journal', 'impact_factor', 'pmc', 'doi', 'pubtype', 'issn']
+    epilog = '''
+    example: \033[36mpython pubmed.py 'ngs AND disease'
+             python pubmed.py '(LVNC) AND (mutation OR variation)' -m 50 -mif 5\033[0m
+
+    contact: {} <{}>
+    '''.format(__author__, __email__)
 
     parser = argparse.ArgumentParser(
         prog='pubmed',
         version=__version__,
         formatter_class=argparse.RawTextHelpFormatter,
-        epilog='contact: {} <{}>'.format(__author__, __email__))
+        epilog=textwrap.dedent(epilog))
 
     parser.add_argument(
         'term',
@@ -390,7 +397,7 @@ if __name__ == "__main__":
         '-enc',
         '--encoding',
         help='The encoding of output xls file[default="%(default)s"]',
-        default='utf8',
+        default='gbk',
         choices=['gbk', 'utf8', 'utf-8'])
     parser.add_argument(
         '-mif',
@@ -417,5 +424,7 @@ if __name__ == "__main__":
         default=','.join(default_title))
 
     args = vars(parser.parse_args())
+    
+    print 'searching term: "{}"'.format(args['term'])
 
     main()
