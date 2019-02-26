@@ -384,7 +384,7 @@ def main():
              python pubmed.py '(LVNC) AND (mutation OR variation)' -m 50 -mif 5\033[0m
 
     contact: {} <{}>
-    '''.format(__author__, __email__)
+    '''.format(__author__, __author_email__)
 
     parser = argparse.ArgumentParser(
         prog='pubmed',
