@@ -1,0 +1,7 @@
+.vscode
+build
+dist
+*-info
+*pyc
+test
+
