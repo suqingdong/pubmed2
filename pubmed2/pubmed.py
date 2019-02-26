@@ -1,5 +1,8 @@
 #!/usr/bin/env python2
 # -*- coding=utf-8 -*-
+'''
+    search pubmeds quickly
+'''
 import os
 import re
 import sys
@@ -27,9 +30,9 @@ sys.path.insert(0, os.path.dirname(BASE_DIR))
 from pubmed2.tools import GetIF, try_again
 
 
-__version__ = '2.3'
+__version__ = '0.0.1'
 __author__ = 'suqingdong'
-__email__ = 'suqingdong@novogene.com'
+__author_email__ = 'suqingdong@novogene.com'
 
 reload(sys)
 sys.setdefaultencoding('utf8')
