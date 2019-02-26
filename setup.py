@@ -3,16 +3,16 @@
 import os
 from setuptools import setup, find_packages
 
-from pubmed2 import pubmed
+from pubmed2 import info
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 setup(
     name='pubmed2',
-    version=pubmed.__version__,
-    author=pubmed.__author__,
-    author_email=pubmed.__author_email__,
-    description=pubmed.__doc__.strip(),
+    version=info.__version__,
+    author=info.__author__,
+    author_email=info.__author_email__,
+    description='search pubmeds quickly',
     long_description=open(os.path.join(BASE_DIR, 'README.rst')).read(),
     url='https://github.com/suqingdong/pubmed2',
     license='BSD License',

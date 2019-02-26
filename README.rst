@@ -1,13 +1,13 @@
 Install
 ------------
 
-- 1 install from pip
+1 install from pip
 
 .. code-block:: console
 
-    pip install twine
+    pip install pubmed2
 
-- 2 install from source code
+2 install from source code
 
 .. code-block:: console
 
@@ -15,7 +15,7 @@ Install
     cd pubmed2
     python setup.py install
 
-- 3 use it directly
+3 use it directly
 
 .. code-block:: console
 

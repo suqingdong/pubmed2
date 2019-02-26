@@ -29,10 +29,8 @@ sys.path.insert(0, os.path.dirname(BASE_DIR))
 
 from pubmed2.tools import GetIF, try_again
 
+from pubmed2.info import __version__, __author__, __author_email__
 
-__version__ = '0.0.1'
-__author__ = 'suqingdong'
-__author_email__ = 'suqingdong@novogene.com'
 
 reload(sys)
 sys.setdefaultencoding('utf8')
@@ -378,7 +376,9 @@ class Pubmed(object):
 
 def main():
 
+    global default_title
     default_title = ['pmid', 'title', 'pubdate', 'authors', 'abstract', 'abstract_cn', 'journal', 'impact_factor', 'pmc', 'doi', 'pubtype', 'issn']
+
     epilog = '''
     example: \033[36mpython pubmed.py 'ngs AND disease'
              python pubmed.py '(LVNC) AND (mutation OR variation)' -m 50 -mif 5\033[0m
