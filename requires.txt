@@ -1,0 +1,8 @@
+bs4
+requests
+xlwt
+colorama
+django
+googletrans
+fuzzywuzzy
+python-Levenshtein

@@ -1,5 +1,8 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 # -*- coding=utf-8 -*-
+'''
+    search pubmeds quickly
+'''
 import os
 import re
 import sys
@@ -10,33 +13,28 @@ import argparse
 import textwrap
 import codecs
 
-try:
-    import bs4
-    import requests
-    import colorama
-    import django
-    from django.conf import settings
-    from django.template import loader
-    from googletrans import Translator
+import bs4
+import requests
+import colorama
+import django
+import xlwt
+from django.conf import settings
+from django.template import loader
+from googletrans import Translator
 
-    from get_impact_factor import get_impact_factor, try_again
 
-except ImportError as e:
-    print 'ImportError: \033[32m{}\033[0m'.format(e)
-    print(
-        'This program needs some modules: bs4, requests, fuzzywuzzy, django, googletrans, colorama, lxml\n'
-        'You can use \033[32m` pip install module_name `\033[0m to install them'
-    )
-    exit(1)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.dirname(BASE_DIR))
 
-__version__ = '2.3'
-__author__ = 'suqingdong'
-__email__ = 'suqingdong@novogene.com'
+
+from pubmed2.tools import GetIF, try_again
+
+from pubmed2.info import __version__, __author__, __author_email__
+
 
 reload(sys)
 sys.setdefaultencoding('utf8')
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 colorama.init()
 
 color_dict = {
@@ -71,8 +69,9 @@ def get_now_time(time_fmt='%Y-%m-%d %H:%M:%S'):
 
 class Pubmed(object):
 
-    def __init__(self):
+    def __init__(self, **args):
 
+        self.args = args
         self.term = args.get('term')
         self.retmax = args.get('retmax')
         self.format = args.get('out_format')
@@ -105,7 +104,7 @@ class Pubmed(object):
         if self.min_factor == -1 and 'impact_factor' in self.title:
             self.title.pop(self.title.index('impact_factor'))
 
-        print 'output title: {}'.format(self.title)
+        # print 'output title: {}'.format(self.title)
 
         # term_list = self.term.split(',')
         term_list = re.split(r',|\s+|;', self.term)
@@ -168,11 +167,13 @@ class Pubmed(object):
                     encoding=self.encoding,
                     errors='ignore') as out:
                 out.write('\t'.join(self.title) + '\n')
-                for num, result in enumerate(results):
+
+                num = 0
+                for num, result in enumerate(results, 1):
                     linelist = [result[each] for each in self.title]
                     out.write('\t'.join(linelist) + '\n')
             print 'save result to: {}.xls'.format(self.out)
-            return num + 1
+            return num
 
         # otherwise, convert generator to list
         results = list(results)
@@ -187,6 +188,49 @@ class Pubmed(object):
                 for result in results:
                     linelist = [result[each] for each in self.title]
                     out.write('\t'.join(linelist) + '\n')
+            print 'save result to: {}.xls'.format(self.out)
+
+        if self.format in ('xlsx', 'all'):
+            wb = xlwt.Workbook()
+            ws = wb.add_sheet('result')
+
+
+            # align: wrap yes,vert centre, horiz left;
+            # font: name Arial, bold True, height 200;
+            # pattern: pattern solid,fore-colour light_yellow;
+
+            header_style = xlwt.easyxf('''
+                font: name Times New Roman, bold on, height 200;
+                pattern: pattern solid, fore-colour white;
+            ''')
+
+            row_styles = [
+                xlwt.easyxf('pattern: pattern solid, fore-colour light_green;'),
+                xlwt.easyxf('pattern: pattern solid, fore-colour light_yellow;')
+            ]
+
+            row = 0
+            col = 0
+            for name in self.title:
+                ws.write(row, col, name.upper(), header_style)
+                col += 1
+            row += 1
+
+            for each in results:
+                col = 0
+                for name in self.title:
+                    value = each[name]
+                    if name == 'impact_factor' and value != '.':
+                        value = float(value)
+                    ws.write(row, col, value, row_styles[row % 2])
+                    col += 1
+                row += 1
+
+            if 'abstract_cn' in self.title:
+                ws.col(self.title.index('abstract_cn')).width = 256 * 50
+
+            wb.save(self.out + '.xls')
+
             print 'save result to: {}.xls'.format(self.out)
 
         if self.format in ('json', 'all'):
@@ -214,7 +258,7 @@ class Pubmed(object):
     def get_response(self, url, **kwargs):
 
         return requests.get(url, **kwargs)
-        
+
 
     @try_again()
     def get_pmids(self, term):
@@ -283,8 +327,6 @@ class Pubmed(object):
                 title = self.get_text(pubmedarticle, 'articletitle')
                 abstract = self.get_text(pubmedarticle, 'abstracttext')
 
-                if 'abstract_cn' in self.title:
-                    abstract_cn = self.translate(abstract)
 
                 pmc = self.get_text(pubmedarticle, 'articleid[idtype="pmc"]')
                 doi = self.get_text(pubmedarticle, 'articleid[idtype="doi"]')
@@ -306,15 +348,14 @@ class Pubmed(object):
                 pubtype = '|'.join([each.text for each in pubtype])
 
                 if 'impact_factor' in self.title:
-                    database = os.path.join(BASE_DIR, 'impact_factor.db')
-                    if os.path.exists(database):
-                        impact_factor = get_impact_factor(journal, database)
-                    else:
-                        impact_factor = get_impact_factor(journal)
+                    impact_factor = GetIF().get_impact_factor(searchname=journal, database=self.args['database']) or '.'
 
                     if self.min_factor:
                         if (impact_factor == '.') or (float(impact_factor) < self.min_factor):
                             continue
+
+                if 'abstract_cn' in self.title:
+                    abstract_cn = self.translate(abstract)
 
                 context = {}
                 for each in self.title:
@@ -331,32 +372,32 @@ class Pubmed(object):
     def get_text(soup, key):
 
         if soup.select(key):
-            text = soup.select(key)[0].text.strip().replace('\n', '-')
-            return text
+            texts = soup.select(key)
+            if len(texts) == 1:
+                return texts[0].text.strip().replace('\n', '-')
+            else:
+                results = []
+                for text in texts:
+                    label = text.attrs.get('label')
+                    result = text.text.strip().replace('\n', '-')
+                    if label:
+                        result = label + ': ' + result
+                    results.append(result)
+                return '\n\n'.join(results)
         return '.'
 
 
 def main():
 
-    start = time.time()
-
-    pubmed = Pubmed()
-    pubmed.start()
-
-    end = time.time()
-
-    print '\nTotal time: {:.2f}s'.format(end - start)
-
-
-if __name__ == "__main__":
-
+    global default_title
     default_title = ['pmid', 'title', 'pubdate', 'authors', 'abstract', 'abstract_cn', 'journal', 'impact_factor', 'pmc', 'doi', 'pubtype', 'issn']
+
     epilog = '''
-    example: \033[36mpython pubmed.py 'ngs AND disease'
-             python pubmed.py '(LVNC) AND (mutation OR variation)' -m 50 -mif 5\033[0m
+    example: \033[36mpubmed 'ngs AND disease'
+             pubmed '(LVNC) AND (mutation OR variation)' -m 50 -mif 5\033[0m
 
     contact: {} <{}>
-    '''.format(__author__, __email__)
+    '''.format(__author__, __author_email__)
 
     parser = argparse.ArgumentParser(
         prog='pubmed',
@@ -379,8 +420,8 @@ if __name__ == "__main__":
         '-O',
         '--out-format',
         help='The output format[default=%(default)s]',
-        default='xls',
-        choices=['xls', 'html', 'json', 'all'])
+        default='xlsx',
+        choices=['xls', 'xlsx', 'html', 'json', 'all'])
     parser.add_argument(
         '-m',
         '--retmax',
@@ -422,9 +463,26 @@ if __name__ == "__main__":
         'you can choose one or more from [%(default)s]\n'
         'and separate by ","',
         default=','.join(default_title))
+    parser.add_argument(
+        '-d',
+        '--database',
+        help='the impact factor database[default=%(default)s]',
+        default=os.path.join(BASE_DIR, 'tools', 'impact_factor.sqlite3'))
 
     args = vars(parser.parse_args())
-    
+
     print 'searching term: "{}"'.format(args['term'])
+
+    start = time.time()
+
+    pubmed = Pubmed(**args)
+    pubmed.start()
+
+    end = time.time()
+
+    print '\nTotal time: {:.2f}s'.format(end - start)
+
+
+if __name__ == "__main__":
 
     main()

@@ -1,0 +1,2 @@
+recursive-include pubmed2/templates *
+recursive-include pubmed2/tools *.sqlite3
